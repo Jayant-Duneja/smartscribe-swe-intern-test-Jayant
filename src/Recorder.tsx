@@ -3,7 +3,7 @@ import { UploadManager } from "./UploadManager";
 
 interface RecordingProps {
   onDownloadRecording: () => void;
-  onResetDownloadStatus: () => void; // Add this line
+  onResetDownloadStatus: () => void;
 }
 
 const RecordingComponent: React.FC<RecordingProps> = ({
@@ -16,6 +16,10 @@ const RecordingComponent: React.FC<RecordingProps> = ({
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [uploadStatus, setUploadStatus] = useState<string>("");
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  let [oscillator, setOscillator] = useState<OscillatorNode | null>(null);
+  const [isOscillatorRunning, setIsOscillatorRunning] =
+    useState<boolean>(false);
   // Stage 2 : Adding a state to track if the user has granted microphone permission
   const [micPermissionGranted, setMicPermissionGranted] =
     useState<boolean>(false);
@@ -30,16 +34,21 @@ const RecordingComponent: React.FC<RecordingProps> = ({
       alert("Please name your recording before starting.");
       return;
     }
-
     if (!mediaRecorder.current) return;
-
     setAudioChunks([]);
     setAudioUrl("");
     setUploadStatus("");
     mediaRecorder.current.start();
     onResetDownloadStatus();
     setIsRecording(true);
-
+    if (audioContext && !isOscillatorRunning) {
+      const newOscillator = audioContext.createOscillator();
+      newOscillator.type = "sine";
+      newOscillator.connect(audioContext.destination);
+      newOscillator.start();
+      setOscillator(newOscillator);
+      setIsOscillatorRunning(true);
+    }
     progressInterval.current = setInterval(() => {
       setProgressTime((prevTime) => prevTime + 1);
     }, 1000);
@@ -65,6 +74,13 @@ const RecordingComponent: React.FC<RecordingProps> = ({
 
     // Reset the progress time to zero
     setProgressTime(0);
+    if (isOscillatorRunning) {
+      console.log("I have stopped the oscillator");
+      oscillator?.stop();
+      oscillator?.disconnect(); // disconnect the oscillator
+      setOscillator(null); // set the oscillator state to null
+      setIsOscillatorRunning(false);
+    }
   };
 
   const handleUpload = (audioBlob: Blob) => {
@@ -89,11 +105,11 @@ const RecordingComponent: React.FC<RecordingProps> = ({
     link.href = audioUrl;
     link.download = `${recordingName}.webm`; // Use the recording name for the file name
     document.body.appendChild(link);
-    document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     onDownloadRecording();
   };
+
   useEffect(() => {
     const initMediaRecorder = async () => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -113,6 +129,22 @@ const RecordingComponent: React.FC<RecordingProps> = ({
         };
         // Stage 2 : Set the micPermissionGranted state to true if the user grants microphone permission
         setMicPermissionGranted(true);
+        // Initialize the AudioContext
+        const context = new AudioContext();
+        const osc = context.createOscillator();
+        osc.type = "sine"; // Type of oscillation (could be 'sine', 'square', 'sawtooth', etc.)
+        osc.connect(context.destination);
+
+        setAudioContext(context);
+        // Initialize the OscillatorNode
+        setOscillator(osc);
+        // Connect the oscillator to the destination (the speakers)
+        // Start the oscillator if the AudioContext is running
+        // if (context && !isOscillatorRunning) {
+        //   osc.start();
+        //   setIsOscillatorRunning(true);
+        // }
+        console.log("hi-6");
       } catch (err) {
         // Stage 2 : Set the micPermissionGranted state to false if the user denies microphone permission
         setMicPermissionGranted(false);
@@ -121,6 +153,15 @@ const RecordingComponent: React.FC<RecordingProps> = ({
     };
 
     initMediaRecorder();
+    // Cleanup function to stop the oscillator and close the AudioContext when the component unmounts
+    return () => {
+      if (isOscillatorRunning) {
+        oscillator?.stop();
+        setIsOscillatorRunning(false);
+      }
+      oscillator?.disconnect();
+      audioContext?.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -226,6 +267,11 @@ const RecordingComponent: React.FC<RecordingProps> = ({
         >
           Upload Recording
         </button>
+      )}
+      {isOscillatorRunning ? (
+        <p>Microphone is active and recording.</p>
+      ) : (
+        <p>Microphone is inactive.</p>
       )}
     </div>
   );
