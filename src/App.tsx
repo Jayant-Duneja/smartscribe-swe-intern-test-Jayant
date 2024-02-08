@@ -8,7 +8,7 @@ function App() {
 
   // Function to reset the download status
   const resetDownloadStatus = () => {
-      setHasDownloaded(false);
+    setHasDownloaded(false);
   };
 
   // Function to update the download status when the user downloads the recording
@@ -20,9 +20,16 @@ function App() {
       {/* Stage 1 : Updating the download status once the user downloads the recording to True. */}
       {/* Display the download status */}
       {/* With this fix, once the user downloads the recording, the status will be updated to "User has downloaded recording: true". */}
-      <div>{hasDownloaded ? "User has downloaded recording: true" : "User has downloaded recording: false"}</div>
+      <div>
+        {hasDownloaded
+          ? "User has downloaded recording: true"
+          : "User has downloaded recording: false"}
+      </div>
       {/* Pass the handleDownloadRecording function to the RecordingComponent */}
-      <RecordingComponent onDownloadRecording={handleDownloadRecording} onResetDownloadStatus={resetDownloadStatus}/>
+      <RecordingComponent
+        onDownloadRecording={handleDownloadRecording}
+        onResetDownloadStatus={resetDownloadStatus}
+      />
     </>
   );
 }

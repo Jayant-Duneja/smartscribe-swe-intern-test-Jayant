@@ -7,7 +7,8 @@ interface RecordingProps {
 }
 
 const RecordingComponent: React.FC<RecordingProps> = ({
-  onDownloadRecording,onResetDownloadStatus
+  onDownloadRecording,
+  onResetDownloadStatus,
 }) => {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingName, setRecordingName] = useState<string>("");
@@ -16,14 +17,15 @@ const RecordingComponent: React.FC<RecordingProps> = ({
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [uploadStatus, setUploadStatus] = useState<string>("");
   // Stage 2 : Adding a state to track if the user has granted microphone permission
-  const [micPermissionGranted, setMicPermissionGranted] = useState<boolean>(false);
+  const [micPermissionGranted, setMicPermissionGranted] =
+    useState<boolean>(false);
 
   const progressInterval = useRef<number | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
 
   const handleStartRecording = () => {
     // Stage 2 : Check if the user has provided a name for the recording before starting
-    // Check if the user has named the recording. Checking with the empty string is enough since that is the default value for this variable/ 
+    // Check if the user has named the recording. Checking with the empty string is enough since that is the default value for this variable/
     if (recordingName === "") {
       alert("Please name your recording before starting.");
       return;
@@ -46,21 +48,21 @@ const RecordingComponent: React.FC<RecordingProps> = ({
   const handleStopRecording = () => {
     // Check if the mediaRecorder and progressInterval are initialized
     if (!mediaRecorder.current || !progressInterval.current) return;
-  
+
     // Stop the media recorder
     mediaRecorder.current.stop();
-  
+
     // Update the recording state to false
     setIsRecording(false);
-  
+
     // Stage 1 : Timer keeps going on even after I press stop recording
-    // Clear the interval that updates the progress time. 
+    // Clear the interval that updates the progress time.
     // With this fix, once the recording is stopped, the progress time will stop updating.
     clearInterval(progressInterval.current); // Clear the interval
-  
+
     // Set the progressInterval ref to null to indicate that there is no active interval
     progressInterval.current = null;
-  
+
     // Reset the progress time to zero
     setProgressTime(0);
   };
@@ -72,7 +74,9 @@ const RecordingComponent: React.FC<RecordingProps> = ({
         console.log(
           `Upload successful. Transcript: ${response.transcript}, Size: ${response.size} bytes`
         );
-        setUploadStatus(`Upload successful. Transcript: ${response.transcript}`);
+        setUploadStatus(
+          `Upload successful. Transcript: ${response.transcript}`
+        );
       })
       .catch((error) => {
         console.error("Upload failed:", error.message);
@@ -89,7 +93,7 @@ const RecordingComponent: React.FC<RecordingProps> = ({
     link.click();
     document.body.removeChild(link);
     onDownloadRecording();
-};
+  };
   useEffect(() => {
     const initMediaRecorder = async () => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -157,29 +161,31 @@ const RecordingComponent: React.FC<RecordingProps> = ({
       />
       {/* Adding a condition such that the Recording button is only displayed when the user grants the microphone permissions */}
       {micPermissionGranted && (
-      <button
-        onClick={isRecording ? handleStopRecording : handleStartRecording}
-        style={{
-          width: "80%",
-          padding: "10px",
-          marginBottom: "20px",
-          borderRadius: "5px",
-          border: "none",
-          backgroundColor: "#007bff",
-          color: "white",
-          cursor: "pointer",
-        }}
-      >
-        {isRecording ? "Stop Recording" : "Start Recording"}
-      </button>
-    )}
+        <button
+          onClick={isRecording ? handleStopRecording : handleStartRecording}
+          style={{
+            width: "80%",
+            padding: "10px",
+            marginBottom: "20px",
+            borderRadius: "5px",
+            border: "none",
+            backgroundColor: "#007bff",
+            color: "white",
+            cursor: "pointer",
+          }}
+        >
+          {isRecording ? "Stop Recording" : "Start Recording"}
+        </button>
+      )}
       <div style={{ marginBottom: "20px" }}>
         Progress Time: {progressTime} seconds
       </div>
       {audioUrl && (
         <div>
           <button
-            onClick={() => { handleDownloadRecording();}}
+            onClick={() => {
+              handleDownloadRecording();
+            }}
             style={{
               width: "80%",
               padding: "10px",
@@ -195,32 +201,32 @@ const RecordingComponent: React.FC<RecordingProps> = ({
           </button>
         </div>
       )}
-      {audioChunks.length >  0 && (
-      <div style={{ marginBottom: "20px" }}>
-        {uploadStatus}
-      </div>
-    )}
+      {audioChunks.length > 0 && (
+        <div style={{ marginBottom: "20px" }}>{uploadStatus}</div>
+      )}
 
-    {audioChunks.length >  0 && (
-      <button
-        onClick={() => {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
-          handleUpload(audioBlob);
-        }}
-        style={{
-          width: "80%",
-          padding: "10px",
-          marginBottom: "20px",
-          borderRadius: "5px",
-          border: "none",
-          backgroundColor: "#007bff",
-          color: "white",
-          cursor: "pointer",
-        }}
-      >
-        Upload Recording
-      </button>
-    )}
+      {audioChunks.length > 0 && (
+        <button
+          onClick={() => {
+            const audioBlob = new Blob(audioChunks, {
+              type: "audio/webm;codecs=opus",
+            });
+            handleUpload(audioBlob);
+          }}
+          style={{
+            width: "80%",
+            padding: "10px",
+            marginBottom: "20px",
+            borderRadius: "5px",
+            border: "none",
+            backgroundColor: "#007bff",
+            color: "white",
+            cursor: "pointer",
+          }}
+        >
+          Upload Recording
+        </button>
+      )}
     </div>
   );
 };
