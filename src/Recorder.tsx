@@ -3,6 +3,7 @@ import { UploadManager } from "./UploadManager";
 
 interface RecordingProps {
   onDownloadRecording: () => void;
+  // Passing the resetDownloadStatus function as a prop to the RecordingComponent so that we can reset the download status once the user presses the "Start Recording" button again without reloading the page
   onResetDownloadStatus: () => void;
 }
 
@@ -15,12 +16,14 @@ const RecordingComponent: React.FC<RecordingProps> = ({
   const [progressTime, setProgressTime] = useState<number>(0);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [audioUrl, setAudioUrl] = useState<string>("");
+  // State variable to track the upload status
   const [uploadStatus, setUploadStatus] = useState<string>("");
+  // Creating an audio context and oscillator state
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   let [oscillator, setOscillator] = useState<OscillatorNode | null>(null);
-  const [isOscillatorRunning, setIsOscillatorRunning] =
-    useState<boolean>(false);
-  // Stage 2 : Adding a state to track if the user has granted microphone permission
+  // State to track if the oscillator is running
+  const [isOscillatorRunning, setIsOscillatorRunning] = useState<boolean>(false);
+  // State to track if the user has granted microphone permission
   const [micPermissionGranted, setMicPermissionGranted] =
     useState<boolean>(false);
 
@@ -28,8 +31,8 @@ const RecordingComponent: React.FC<RecordingProps> = ({
   const mediaRecorder = useRef<MediaRecorder | null>(null);
 
   const handleStartRecording = () => {
-    // Stage 2 : Check if the user has provided a name for the recording before starting
-    // Check if the user has named the recording. Checking with the empty string is enough since that is the default value for this variable/
+    // Check if the user has named the recording. Checking with the empty string is enough since that is the default value for this variable. Raise an error if no name 
+    // has been provided.
     if (recordingName === "") {
       alert("Please name your recording before starting.");
       return;
@@ -39,8 +42,10 @@ const RecordingComponent: React.FC<RecordingProps> = ({
     setAudioUrl("");
     setUploadStatus("");
     mediaRecorder.current.start();
+    // This function is called so that the download status is reset once the user presses the Start Recording button again without reloading the page
     onResetDownloadStatus();
     setIsRecording(true);
+    // Define the oscillator and starting the oscillator everytime the user starts recording. This indiciates that the microphone is active and recording.
     if (audioContext && !isOscillatorRunning) {
       const newOscillator = audioContext.createOscillator();
       newOscillator.type = "sine";
@@ -64,7 +69,6 @@ const RecordingComponent: React.FC<RecordingProps> = ({
     // Update the recording state to false
     setIsRecording(false);
 
-    // Stage 1 : Timer keeps going on even after I press stop recording
     // Clear the interval that updates the progress time.
     // With this fix, once the recording is stopped, the progress time will stop updating.
     clearInterval(progressInterval.current); // Clear the interval
@@ -74,8 +78,9 @@ const RecordingComponent: React.FC<RecordingProps> = ({
 
     // Reset the progress time to zero
     setProgressTime(0);
+    // Stop the oscillator and disconnect the oscillator when the user stops recording. This indicates that the microphone is inactive.
+    // Disconnecting it helps with the memory management and performance of the application.
     if (isOscillatorRunning) {
-      console.log("I have stopped the oscillator");
       oscillator?.stop();
       oscillator?.disconnect(); // disconnect the oscillator
       setOscillator(null); // set the oscillator state to null
@@ -84,25 +89,30 @@ const RecordingComponent: React.FC<RecordingProps> = ({
   };
 
   const handleUpload = (audioBlob: Blob) => {
+    // Setting the upload status to "Uploading..." when the user clicks the Upload Recording button
     setUploadStatus("Uploading...");
     UploadManager.upload(audioBlob)
       .then((response) => {
         console.log(
           `Upload successful. Transcript: ${response.transcript}, Size: ${response.size} bytes`
-        );
+        ); 
+        // Sets the status to upload successful and displays the transcript and size of the recording
         setUploadStatus(
           `Upload successful. Transcript: ${response.transcript}`
         );
       })
       .catch((error) => {
         console.error("Upload failed:", error.message);
+        // Sets the status to upload failed and displays the error message
         setUploadStatus(`Upload failed: ${error.message}`);
       });
   };
-
+  // Function to handle the download of the recording
+  // Moved this from the bottom to make the code more readable and cleaner
   const handleDownloadRecording = () => {
     const link = document.createElement("a");
     link.href = audioUrl;
+    // Use the recording name for the file name when downloading the recording
     link.download = `${recordingName}.webm`; // Use the recording name for the file name
     document.body.appendChild(link);
     link.click();
@@ -127,24 +137,16 @@ const RecordingComponent: React.FC<RecordingProps> = ({
         mediaRecorder.current.ondataavailable = (event) => {
           setAudioChunks((currentChunks) => [...currentChunks, event.data]);
         };
-        // Stage 2 : Set the micPermissionGranted state to true if the user grants microphone permission
+        //Set the micPermissionGranted state to true if the user grants microphone permission
         setMicPermissionGranted(true);
-        // Initialize the AudioContext
+        // Initialize the AudioContext. Setup required to use the Audiocontext and Oscillator
         const context = new AudioContext();
         const osc = context.createOscillator();
         osc.type = "sine"; // Type of oscillation (could be 'sine', 'square', 'sawtooth', etc.)
-        osc.connect(context.destination);
-
+        osc.connect(context.destination); // Connect the oscillator to the speakers
         setAudioContext(context);
         // Initialize the OscillatorNode
         setOscillator(osc);
-        // Connect the oscillator to the destination (the speakers)
-        // Start the oscillator if the AudioContext is running
-        // if (context && !isOscillatorRunning) {
-        //   osc.start();
-        //   setIsOscillatorRunning(true);
-        // }
-        console.log("hi-6");
       } catch (err) {
         // Stage 2 : Set the micPermissionGranted state to false if the user denies microphone permission
         setMicPermissionGranted(false);
@@ -245,10 +247,11 @@ const RecordingComponent: React.FC<RecordingProps> = ({
       {audioChunks.length > 0 && (
         <div style={{ marginBottom: "20px" }}>{uploadStatus}</div>
       )}
-
+      {/* Adding a button for handling the upload of the recording */}
       {audioChunks.length > 0 && (
         <button
           onClick={() => {
+            // Convert the chunks into a audioBlob and upload the recording
             const audioBlob = new Blob(audioChunks, {
               type: "audio/webm;codecs=opus",
             });
@@ -268,6 +271,7 @@ const RecordingComponent: React.FC<RecordingProps> = ({
           Upload Recording
         </button>
       )}
+      {/* Telling the user if the microphone is active or inactive based on the state of the oscillator */}
       {isOscillatorRunning ? (
         <p>Microphone is active and recording.</p>
       ) : (
