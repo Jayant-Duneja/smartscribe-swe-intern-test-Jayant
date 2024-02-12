@@ -4,6 +4,7 @@ import React from "react";
 const resetDownloadStatus = (
   setHasDownloaded: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
+  console.log("resetting download status");
   setHasDownloaded(false);
 };
 

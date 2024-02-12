@@ -9,34 +9,37 @@ import { handleUpload } from "../Uploader/uploading";
 import { DownloadManager } from "../Downloader/DownloadManager";
 import { StatusMessages } from "../Constants/const";
 import ProgressDisplay from "./ProgressDisplay";
+// Defining the props for the RecordingComponent
 interface RecordingProps {
   onDownloadRecording: () => void;
   // Passing the resetDownloadStatus function as a prop to the RecordingComponent so that we can reset the download status once the user presses the "Start Recording" button again without reloading the page
   onResetDownloadStatus: () => void;
   hasDownloaded: boolean;
-  setHasDownloaded: React.Dispatch<React.SetStateAction<boolean>>; 
+  setHasDownloaded: React.Dispatch<React.SetStateAction<boolean>>;
 }
-
+// The main RecordingComponent
 const RecordingComponent: React.FC<RecordingProps> = ({
   onDownloadRecording,
   onResetDownloadStatus,
   hasDownloaded,
-  setHasDownloaded
+  setHasDownloaded,
 }) => {
+  // State variables to track the recording status, recording name, progress time, audio chunks, audio URL, and upload status
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingName, setRecordingName] = useState<string>("");
   const [progressTime, setProgressTime] = useState<number>(0);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [audioUrl, setAudioUrl] = useState<string>("");
-  // const [hasDownloaded, setHasDownloaded] = useState<boolean>(false);
   // State variable to track the upload status
   const [uploadStatus, setUploadStatus] = useState<string>("");
   // State to track if the user has granted microphone permission
-  const [micPermissionGranted, setMicPermissionGranted] = useState<boolean>(false);
+  const [micPermissionGranted, setMicPermissionGranted] =
+    useState<boolean>(false);
   const progressInterval = useRef<number | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const [hasMicInput, setMicInput ] = useState<boolean>(false);
+  const [hasMicInput, setMicInput] = useState<boolean>(false);
   // console.log(hasDownloaded)
+  // useEffect hook to initialize media recorder
   useEffect(() => {
     const initMediaRecorder = async () => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -47,10 +50,9 @@ const RecordingComponent: React.FC<RecordingProps> = ({
       }
 
       try {
-        // Setting up the Audio Context Instance and the Analyser Node and getting the stream
-            // Create an AudioContext instance
+        // Check for media devices and getUserMedia support
+        // Request microphone access and initialize media recorder
         const audioContext = new AudioContext();
-
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
@@ -68,10 +70,15 @@ const RecordingComponent: React.FC<RecordingProps> = ({
     initMediaRecorder();
   }, []);
 
+  // useEffect hook to check microphone status
   useEffect(() => {
     const checkMicrophoneStatus = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Check if microphone is active
+        // Set microphone input and permission status
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
         const audioContext = new AudioContext();
         const microphone = audioContext.createMediaStreamSource(stream);
         if (stream.active) {
@@ -84,9 +91,9 @@ const RecordingComponent: React.FC<RecordingProps> = ({
         }
 
         // Close the stream to release resources
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       } catch (error) {
-        console.error('Error accessing microphone:', error);
+        console.error("Error accessing microphone:", error);
         setMicInput(false);
         setMicPermissionGranted(false);
       }
@@ -100,6 +107,7 @@ const RecordingComponent: React.FC<RecordingProps> = ({
     return () => clearInterval(intervalId);
   }, []);
 
+  // useEffect hook to handle audio chunks
   useEffect(() => {
     if (audioChunks.length > 0 && !isRecording) {
       const audioBlob = new Blob(audioChunks, {
@@ -107,16 +115,20 @@ const RecordingComponent: React.FC<RecordingProps> = ({
       });
       const url = URL.createObjectURL(audioBlob);
       setAudioUrl(url);
-      navigator.mediaDevices.getUserMedia({
-        audio: true,
-      }).then((stream) => {
-        // console.log(stream);
-      }).catch((err) => {
-        console.error("Failed to get user media", err);
-      });
+      navigator.mediaDevices
+        .getUserMedia({
+          audio: true,
+        })
+        .then((stream) => {
+          // console.log(stream);
+        })
+        .catch((err) => {
+          console.error("Failed to get user media", err);
+        });
     }
   }, [audioChunks, isRecording]);
 
+  // Rendering the RecordingComponent
   return (
     <div className="recorder-main">
       <input
@@ -128,7 +140,7 @@ const RecordingComponent: React.FC<RecordingProps> = ({
 
       {/* Start and Stop Recording */}
       {/* Adding a condition such that the Recording button is only displayed when the user grants the microphone permissions */}
-      {(micPermissionGranted && !isRecording) ?(
+      {micPermissionGranted && !isRecording ? (
         <button
           onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
             if (isRecording) {
@@ -169,30 +181,35 @@ const RecordingComponent: React.FC<RecordingProps> = ({
         >
           {isRecording ? "Stop Recording" : "Start Recording"}
         </button>
-      ):null}
-      {isRecording && (<div>
-            <button onClick={(event: React.MouseEvent<HTMLButtonElement>) => { handleStopRecording(
+      ) : null}
+      {isRecording && (
+        <div>
+          <button
+            onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+              handleStopRecording(
                 mediaRecorder.current,
                 setHasDownloaded,
                 setIsRecording,
                 clearInterval as (handle: number | null) => void,
                 progressInterval,
                 setProgressTime
-              );}}
-              style={{
-                width: "80%",
-                padding: "10px",
-                marginBottom: "20px",
-                borderRadius: "5px",
-                border: "none",
-                backgroundColor: "#007bff",
-                color: "white",
-                cursor: "pointer",
-              }}
-              >
-              Stop Recording
-            </button>
-        </div>)}
+              );
+            }}
+            style={{
+              width: "80%",
+              padding: "10px",
+              marginBottom: "20px",
+              borderRadius: "5px",
+              border: "none",
+              backgroundColor: "#007bff",
+              color: "white",
+              cursor: "pointer",
+            }}
+          >
+            Stop Recording
+          </button>
+        </div>
+      )}
       {/* Displaying Progress */}
       <ProgressDisplay progressTime={progressTime} />
 
@@ -254,7 +271,9 @@ const RecordingComponent: React.FC<RecordingProps> = ({
           {StatusMessages.DownloadedRecording} {hasDownloaded.toString()} ✅
         </p>
       )}
-      {isRecording && hasMicInput ? <p>Recording...</p> : null}
+      {isRecording && hasMicInput ? (
+        <p>Recording in progress, microphone is active...</p>
+      ) : null}
     </div>
   );
 };
