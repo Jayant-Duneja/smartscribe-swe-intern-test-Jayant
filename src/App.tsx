@@ -15,6 +15,8 @@ function App() {
       <RecordingComponent
         onDownloadRecording={() => handleDownloadRecording(setHasDownloaded)}
         onResetDownloadStatus={() => resetDownloadStatus(setHasDownloaded)}
+        hasDownloaded={hasDownloaded}
+        setHasDownloaded={setHasDownloaded}
       />
     </>
   );
