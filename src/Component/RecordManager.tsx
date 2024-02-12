@@ -29,12 +29,16 @@ const RecordingComponent: React.FC<RecordingProps> = ({
   // State variable to track the upload status
   const [uploadStatus, setUploadStatus] = useState<string>("");
   // State to track if the user has granted microphone permission
-  const [micPermissionGranted, setMicPermissionGranted] =
-    useState<boolean>(false);
-
+  const [micPermissionGranted, setMicPermissionGranted] = useState<boolean>(false);
+  // state to track the audio level
+  const [audioLevel, setAudioLevel] = useState<number>(0);
   const progressInterval = useRef<number | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const [isMicWorking, setisMicWorking] = useState<boolean>(false);
+  // const [recordingEnabled, setRecordingEnabled] = useState(true);
+  const analyserCanvas: any = React.useRef(null);
+  // console.log(mediaRecorder.current)
   useEffect(() => {
     const initMediaRecorder = async () => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -45,6 +49,10 @@ const RecordingComponent: React.FC<RecordingProps> = ({
       }
 
       try {
+        // Setting up the Audio Context Instance and the Analyser Node and getting the stream
+            // Create an AudioContext instance
+        const audioContext = new AudioContext();
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
@@ -53,6 +61,22 @@ const RecordingComponent: React.FC<RecordingProps> = ({
           setAudioChunks((currentChunks) => [...currentChunks, event.data]);
         };
         setMicPermissionGranted(true);
+
+        
+        // Create a source node from the stream
+        const source = audioContext.createMediaStreamSource(stream);
+
+        // Create an AnalyserNode
+        const analyser = audioContext.createAnalyser();
+
+        // Connect the source to the analyser and the analyser to the destination
+        source.connect(analyser);
+        //analyser.connect(audioContext.destination);
+
+        // Set the analyser on the ref so it can be accessed later
+        analyserRef.current = analyser;
+        
+
       } catch (err) {
         setMicPermissionGranted(false);
         console.error("Failed to get user media", err);
@@ -61,6 +85,47 @@ const RecordingComponent: React.FC<RecordingProps> = ({
 
     initMediaRecorder();
   }, []);
+//   const ctx = analyserCanvas.current.getContext('2d');
+//   const loopingFunction = () => {
+//     requestAnimationFrame(loopingFunction);
+//     analyser.getByteFrequencyData(data);
+// };
+/* "requestAnimationFrame" requests the browser to execute the code during the next repaint cycle. This allows the system to optimize resources and frame-rate to reduce unnecessary reflow/repaint calls. */
+//  requestAnimationFrame(loopingFunction); 
+  useEffect(() => {
+    let animationId: number | undefined;
+
+    const updateAudioLevel = () => {
+      if (analyserRef.current) {
+        const bufferLength = analyserRef.current.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyserRef.current.getByteFrequencyData(dataArray);
+
+        // Calculate the average volume
+        let sum =   0;
+        for (let i =   0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const averageVolume = sum / bufferLength;
+
+        // Update the state with the average volume
+        setAudioLevel(averageVolume);
+      }
+
+      // Schedule the next update
+      animationId = requestAnimationFrame(updateAudioLevel);
+    };
+
+    // Start updating the audio level
+    updateAudioLevel();
+
+    // Clean up the effect
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [analyserRef]);
 
   useEffect(() => {
     if (audioChunks.length > 0 && !isRecording) {
@@ -69,6 +134,13 @@ const RecordingComponent: React.FC<RecordingProps> = ({
       });
       const url = URL.createObjectURL(audioBlob);
       setAudioUrl(url);
+      navigator.mediaDevices.getUserMedia({
+        audio: true,
+      }).then((stream) => {
+        // console.log(stream);
+      }).catch((err) => {
+        console.error("Failed to get user media", err);
+      });
     }
   }, [audioChunks, isRecording]);
 
@@ -187,6 +259,14 @@ const RecordingComponent: React.FC<RecordingProps> = ({
           {StatusMessages.DownloadedRecording} {hasDownloaded.toString()} ✅
         </p>
       )}
+
+      {/* Audio Level */}
+      {audioLevel !==   0 && (
+        <div>
+          Audio Level: {audioLevel}
+        </div>
+      )}
+      {/* {isRecording && <p>Recording...</p>} */}
     </div>
   );
 };

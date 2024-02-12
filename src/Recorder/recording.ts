@@ -1,5 +1,5 @@
 import { RecordingMessages } from "../Constants/const";
-
+import React, { useState, useEffect, useRef } from "react";
 const handleStartRecording = (
   mediaRecorder: MediaRecorder,
   recordingName: string,
@@ -11,8 +11,6 @@ const handleStartRecording = (
   progressInterval: React.MutableRefObject<number | null>,
   setProgressTime: React.Dispatch<React.SetStateAction<number>>
 ) => {
-  // Check if the user has named the recording. Checking with the empty string is enough since that is the default value for this variable. Raise an error if no name
-  // has been provided.
   if (recordingName === "") {
     alert(RecordingMessages.NO_NAME);
     return;
