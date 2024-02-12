@@ -35,3 +35,24 @@ We understand that your time is valuable, and this challenge is not meant to tak
 ## Submission
 
 Once you have completed the challenge to your satisfaction, please submit your work by pushing your code to a GitHub repository and sharing the link with us. Include a README notes you think might be helpful in understanding your approach and thought-process. If you spent a lot of time going down a path that didn't prove fruitful—that's software development!—include a note in your README.
+
+
+## Approach:
+
+To address the issues outlined in Stage I, I made the following changes:
+
+1. To prevent the timer from continuing to increment after stopping the recording, I modified the handleStopRecording function in recording.ts. After stopping the mediaRecorder, I clear the interval that was updating the progress time and reset the progress time to zero.
+2. To ensure that the download status message updates correctly after the user downloads the audio, I updated the handleDownloadRecording function in download.ts. Now, when the user initiates a download, the setHasDownloaded state is set to true, reflecting that the user has successfully downloaded the recording.
+
+For the improvements in Stage II, I enhanced the user experience with the following features:
+
+1. The start recording button is now conditionally rendered based on whether the user has granted microphone permissions. This is achieved by checking the micPermissionGranted state in RecordManager.tsx before rendering the button.
+2. Before allowing the user to start recording, I added a check in RecordManager.tsx to ensure that the user has entered a name for the recording. If the recordingName state is empty, the start recording button remains disabled.
+3. To make the downloaded file's name match the recording name, I modified the DownloadManager.download function call in RecordManager.tsx to pass the recordingName as the filename parameter.
+
+
+In Stage III, I implemented the new upload feature as follows:
+
+1. An "Upload" button was added to the UI in RecordManager.tsx. When clicked, it triggers the handleUpload function, which simulates the transcription process.
+2. During the upload process, I added UI elements to display the status of the upload. These elements are conditionally rendered based on the uploadStatus state.
+3. I handled both success and failure cases of the upload. On success, the returned data is displayed to the user. On failure, an appropriate message is shown.
